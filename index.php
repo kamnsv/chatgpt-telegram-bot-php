@@ -1,35 +1,40 @@
 <?php
-include "bot.php"; //Import functions file
-
-
-$token="Your Bot Token"; //Bot Token
-$api="Your OpenAi Api Key";//openai ApiKey
+include "bot.php"; 
+include "cfg.php";
 
 $bot= new tgbot($token,$api); //create bot object 
 
-$data = json_decode(file_get_contents('php://input')); //Get Updates
-
-
-//Getting User Message 
-$text=$data->message->text;
-
-//Getting User Name And I'd
-
-$firstname=$data->message->from->first_name;
-//$lastname=$data->message->from->
-$chat_id = $data->message->from->id;
+if (isset($_POST['q']) and isset($_POST['s'])) {
+  if ($secret != $_POST['s']) exit();
+  $text = $_POST['q'];
+  $firstname = 'Guest';
+  $chat_id = 0;
+}
+else {
+  $data = json_decode(file_get_contents('php://input')); //Get Updates
+  $username = $data->message->from->username;
+  if (!in_array($username, $usernames)) exit();
+  $text = $data->message->text;
+  $firstname = $data->message->from->first_name;
+  $chat_id = $data->message->from->id;
+}
 
 //Checking The Message And Sending Reply
-if($text=='/start'){
-  $bot->send_message($chat_id,"<b> Hello $firstname Welcome To Ai Bot\n\nthis Bot Created using openai Api\n\nUse /ask command To ask questions</b>","html");
-}elseif($text=='/ask' or substr($text,0,4)=='/ask'){
-$msg=explode("/ask ",$text);
-  $prompt=$msg[1];
-  if($prompt !=""){
-    $answer=$bot->get_answer($prompt);
-  $bot->send_message($chat_id, $answer,"html");
-  }else{
-    $bot->send_message($chat_id, "<b>send like this /ask your question</b>","html");
+if($text=='/start' and $chat_id != 0){
+  $bot->send_message($chat_id,"<b> Hello $firstname Welcome To Ai Bot\n\nthis Bot Created using openai Api","html");
+}else{
+  if($text != ""){
+    $answer=$bot->get_answer($text);
+    if ("" == $answer){
+      http_response_code(429);
+      $answer = $bot->response;
+    }
+    if ($chat_id != 0) {
+      $bot->send_message($chat_id, $answer, 'Markdown');
+    }
+    else {
+      echo $answer;
+    }
   }
 }
   
